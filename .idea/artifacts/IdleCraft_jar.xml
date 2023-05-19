@@ -1,6 +1,6 @@
 <component name="ArtifactManager">
   <artifact name="IdleCraft:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts/IdleCraft_jar</output-path>
+    <output-path>$USER_HOME$/OneDrive/ドキュメント/jar</output-path>
     <root id="root">
       <element id="archive" name="IdleCraft.jar">
         <element id="directory" name="META-INF">
