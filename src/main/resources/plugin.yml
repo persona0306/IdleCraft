@@ -1,3 +1,8 @@
 name: IdleCraft
-version: ${project.artifactId}
+version: ${project.version}
 main: peru.sugoi.idlecraft.IdleCraft
+api-version: 1.19
+author: persona0306
+permissions:
+  idlecraft.op:
+    default: op
