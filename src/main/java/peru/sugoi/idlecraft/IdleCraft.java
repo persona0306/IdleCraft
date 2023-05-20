@@ -1,6 +1,8 @@
 package peru.sugoi.idlecraft;
 
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
+import peru.sugoi.idlecraft.listener.EventListener;
 
 @SuppressWarnings("unused")
 public class IdleCraft extends JavaPlugin {
@@ -14,5 +16,7 @@ public class IdleCraft extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+
+        Bukkit.getPluginManager().registerEvents(new EventListener(), this);
     }
 }
