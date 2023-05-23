@@ -3,6 +3,12 @@ version: ${project.version}
 main: peru.sugoi.idlecraft.IdleCraft
 api-version: 1.19
 author: persona0306
+commands:
+  stats:
+    description: Shows stats
+    usage: /<command>
+    default: true
+    aliases: [st]
 permissions:
   idlecraft.op:
     default: op

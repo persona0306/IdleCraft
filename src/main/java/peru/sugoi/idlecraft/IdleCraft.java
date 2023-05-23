@@ -2,13 +2,12 @@ package peru.sugoi.idlecraft;
 
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
+import peru.sugoi.idlecraft.command.Command_Stats;
 import peru.sugoi.idlecraft.listener.EventListener;
 
-@SuppressWarnings("unused")
 public class IdleCraft extends JavaPlugin {
     private static IdleCraft instance;
 
-    @SuppressWarnings("unused")
     public static IdleCraft getInstance() {
         return instance;
     }
@@ -18,5 +17,7 @@ public class IdleCraft extends JavaPlugin {
         instance = this;
 
         Bukkit.getPluginManager().registerEvents(new EventListener(), this);
+
+        getCommand("stats").setExecutor(new Command_Stats());
     }
 }
