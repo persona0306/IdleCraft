@@ -133,10 +133,5 @@ public class InventoryMenu {
             }
         }
 
-        player.sendMessage("======================");
-        commonItemMap.forEach((key, value) -> {
-            player.sendMessage(value + "x " + key);
-        });
-        player.sendMessage("======================");
     }
 }
