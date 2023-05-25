@@ -1,19 +1,18 @@
 package peru.sugoi.idlecraft.player;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import java.util.UUID;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.awt.event.ItemEvent;
-import java.util.UUID;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 public class InventoryMenu {
     private static final ItemStack BLANK_ITEM;
@@ -49,6 +48,10 @@ public class InventoryMenu {
     InventoryMenu(OfflinePlayer player) {
         this.uid = player.getUniqueId();
         page = 0;
+    }
+
+    public int getPage() {
+    	return page;
     }
 
     public OfflinePlayer getPlayer() {
@@ -92,7 +95,7 @@ public class InventoryMenu {
 
         ImmutableList<ItemStack> toolList = vInventory.getToolList();
 
-        for (int i = 18; i < 35; i++) {
+        for (int i = 18; i < 36; i++) {
             int index = i - 18 + 18 * page;
 
             if (commonItemKeyArray.length > index) {
