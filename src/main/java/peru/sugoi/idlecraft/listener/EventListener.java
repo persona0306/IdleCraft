@@ -4,6 +4,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -11,189 +12,245 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.inventory.Inventory;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitRunnable;
-import peru.sugoi.idlecraft.IdleCraft;
+
 import peru.sugoi.idlecraft.player.PlayerData;
 import peru.sugoi.idlecraft.player.PlayerStats;
 import peru.sugoi.idlecraft.player.VInventory;
 
 public class EventListener implements Listener {
 
-    @EventHandler
-    public void onClickInventory(InventoryClickEvent e) {
-        e.getWhoClicked().sendMessage("click");
-        e.getWhoClicked().sendMessage("cursor: " + (e.getCursor() == null ? "null" : "" + e.getCursor().getType() + e.getCursor().getAmount()));
-        e.getWhoClicked().sendMessage("current: " + (e.getCursor() == null ? "null" : "" + e.getCurrentItem().getType() + e.getCurrentItem().getAmount()));
+	@EventHandler
+	public void onClickInventory(InventoryClickEvent e) {
 
-        if (e.getClickedInventory() == null) return;
+		if (e.getClickedInventory() == null) return;
 
-        Player player = (Player) e.getWhoClicked();
+		Player player = (Player) e.getWhoClicked();
 
-        Inventory inv = player.getInventory();
+		if (!e.getInventory().getType().equals(InventoryType.CRAFTING)) {
+			e.setCancelled(true);
+			return;
+		}
 
-        if (!e.getClickedInventory().equals(inv)) {
-            e.setCancelled(true);
-            return;
-        }
+		if (e.getSlot() < 9 &&
+				!e.getAction().equals(InventoryAction.MOVE_TO_OTHER_INVENTORY)) return;
 
-        if (e.getSlot() < 9) return;
+		e.setCancelled(true);
 
-        if (8 < e.getSlot() && e.getSlot() < 18) {
-            e.setCancelled(true);
-            return;
-        }
+		PlayerData playerData = PlayerData.get(player);
 
-        if (e.getCurrentItem() == null && e.getCursor() == null) return;
-        if (e.getCurrentItem().getType().equals(Material.AIR) && e.getCursor().getType().equals(Material.AIR)) return;
+		VInventory vInventory = playerData.getVirtualInventory();
 
-        PlayerData playerData = PlayerData.get(player);
+		if (e.getSlot() == 9) vInventory.setPage(vInventory.getPage() - 1);
+		if (e.getSlot() == 17) vInventory.setPage(vInventory.getPage() + 1);
 
-        VInventory vInventory = playerData.getVirtualInventory();
+		if (8 < e.getSlot() && e.getSlot() < 18) return;
 
-        ItemStack item = e.getCursor().getType().equals(Material.AIR) ? e.getCurrentItem().clone() : e.getCursor().clone();
+		if (e.getCurrentItem() == null && e.getCursor() == null) return;
+		if (e.getCurrentItem().getType().equals(Material.AIR) && e.getCursor().getType().equals(Material.AIR)) return;
 
-        if (e.getCursor().getType().equals(Material.AIR)) {
-            vInventory.removeItem(item);
-            e.setCurrentItem(item);
+		ItemStack item = e.getCursor().getType().equals(Material.AIR) ? e.getCurrentItem().clone() : e.getCursor().clone();
 
-        }else {
-            e.getCursor().setAmount(0);
-            e.setCancelled(true);
+		player.setCooldown(Material.AIR, 60);
 
-            vInventory.addItem(item);
-        }
+		ItemStack itemAdd = null;
+		ItemStack itemRemove = null;
 
-        e.getWhoClicked().sendMessage("cursor: " + (e.getCursor() == null ? "null" : "" + e.getCursor().getType() + e.getCursor().getAmount()));
-        e.getWhoClicked().sendMessage("current: " + (e.getCursor() == null ? "null" : "" + e.getCurrentItem().getType() + e.getCurrentItem().getAmount()));
-    }
+		if (e.getAction().equals(InventoryAction.DROP_ALL_SLOT)) {
+			itemRemove = e.getCurrentItem().clone();
 
-    @EventHandler
-    public void onDragInventory(InventoryDragEvent e) {
-        Inventory inv = e.getWhoClicked().getInventory();
+			Item itemEntity = player.getWorld().dropItem(player.getEyeLocation(), itemRemove);
 
-        if (!e.getInventory().equals(inv)) {
-            return;
-        }
+			itemEntity.setPickupDelay(40);
+			itemEntity.setVelocity(player.getLocation().getDirection().multiply(0.35));
+		}
 
-        boolean isHotBar = true;
+		if (e.getAction().equals(InventoryAction.DROP_ONE_SLOT)) {
+			itemRemove = e.getCurrentItem().clone();
+			itemRemove.setAmount(1);
 
-        for (Integer slot : e.getInventorySlots()) {
-            if (slot > 8) {
-                isHotBar = false;
-                break;
-            }
-        }
+			Item itemEntity = player.getWorld().dropItem(player.getEyeLocation(), itemRemove);
 
-        if (isHotBar) return;
+			itemEntity.setPickupDelay(40);
+			itemEntity.setVelocity(player.getLocation().getDirection().multiply(0.35));
+		}
 
-        Player player = (Player) e.getWhoClicked();
+		if (e.getAction().equals(InventoryAction.PICKUP_ALL)) {
+			itemRemove = e.getCurrentItem().clone();
 
-        PlayerData playerData = PlayerData.get(player);
+			e.getWhoClicked().setItemOnCursor(itemRemove);
+		}
 
-        VInventory vInventory = playerData.getVirtualInventory();
+		if (e.getAction().equals(InventoryAction.PICKUP_HALF)) {
+			int amount = (int) Math.ceil((double)item.getAmount() / 2);
 
-        e.getCursor().setAmount(0);
-        e.setCancelled(true);
+			itemRemove = e.getCurrentItem().clone();
+			itemRemove.setAmount(amount);
 
-        vInventory.addItem(e.getCursor());
-    }
+			e.getWhoClicked().setItemOnCursor(itemRemove);
+		}
 
-    @EventHandler
-    public void onKillEntity(EntityDeathEvent e) {
-        if (e.getEntity().getKiller() == null) return;
+		if (e.getAction().equals(InventoryAction.PLACE_ALL)) {
+			itemAdd = e.getCursor().clone();
 
-        Player player = e.getEntity().getKiller();
+			e.getWhoClicked().setItemOnCursor(new ItemStack(Material.AIR));
+		}
 
-        PlayerData playerData = PlayerData.get(player);
+		if (e.getAction().equals(InventoryAction.PLACE_ONE)) {
+			itemAdd = e.getCursor().clone();
+			itemAdd.setAmount(1);
 
-        PlayerStats playerStats = playerData.getPlayerStats();
+			ItemStack itemCursor = e.getWhoClicked().getItemOnCursor();
 
-        VInventory vInventory = playerData.getVirtualInventory();
+			int amount = itemCursor.getAmount() - 1;
 
-        int entityMaxHealth = (int)e.getEntity().getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+			itemCursor.setAmount(amount);
+		}
 
-        playerStats.setStr(playerStats.getStr() + entityMaxHealth);
+		if (e.getAction().equals(InventoryAction.MOVE_TO_OTHER_INVENTORY)) {
+			if (e.getSlot() < 9) {
+				itemAdd = e.getCurrentItem().clone();
 
-        e.getDrops().stream().forEach(item -> {
+				e.getClickedInventory().setItem(e.getSlot(), new ItemStack(Material.AIR));
 
-        });
-    }
+			}else {
+				int slot = -1;
 
-    @EventHandler
-    public void onPickup(EntityPickupItemEvent e) {
-        if (!(e.getEntity() instanceof Player player)) return;
+				for (int i = 0; i < 9; i++) {
+					ItemStack inventoryItem = e.getClickedInventory().getItem(i);
 
-        PlayerData playerData = PlayerData.get(player);
+					if (inventoryItem == null
+							|| inventoryItem.getType().equals(Material.AIR)) {
+						slot = i;
+						break;
+					}
+				}
 
-        playerData.pickUpItem(e.getItem().getItemStack());
+				if (slot == -1) return;
 
-        int amount = e.getItem().getItemStack().getAmount();
-        Material type = e.getItem().getItemStack().getType();
+				itemRemove = e.getCurrentItem().clone();
 
-        player.sendTitle(
-                "",
-                ChatColor.GREEN + "+ "
-                        + ChatColor.AQUA + amount
-                        + ChatColor.RESET + "x " + type,
-                0, 0, 15);
+				e.getClickedInventory().setItem(slot, itemRemove);
+				e.getClickedInventory().setItem(e.getSlot(), new ItemStack(Material.AIR));
 
-        e.getItem().getWorld().playSound(
-                e.getItem().getLocation(),
-                Sound.ENTITY_ITEM_PICKUP,
-                1,
-                1 + (float)Math.random());
+			}
+		}
 
-        PlayerStats playerStats = playerData.getPlayerStats();
+		if (itemAdd != null) vInventory.addItem(itemAdd);
+		if (itemRemove != null) vInventory.removeItem(itemRemove);
 
-        if (type.getMaxStackSize() == 1) {
-            playerStats.setDef(playerStats.getDef() + 5 * amount);
-        }else {
-            playerStats.setMaxHealth(playerStats.getMaxHealth() + amount);
-        }
+	}
 
-        playerStats.setHealth(playerStats.getHealth() + amount * playerStats.getMaxHealth() / 100);
-        player.setFoodLevel(player.getFoodLevel() + 1);
+	@EventHandler
+	public void onDragInventory(InventoryDragEvent e) {
+		if (e.getInventory() == null) return;
 
-        e.setCancelled(true);
-        e.getItem().remove();
-    }
+		if (!e.getInventory().getType().equals(InventoryType.CRAFTING)) {
+			e.setCancelled(true);
+			return;
+		}
 
-    @EventHandler
-    public void onPlayerAttack(EntityDamageByEntityEvent e) {
-        if (!(e.getDamager() instanceof Player player)) return;
+		boolean isHotbarOnly = true;
+		for (int slot : e.getInventorySlots()) {
+			if (slot > 8) isHotbarOnly = false;
+		}
 
-        PlayerData playerData = PlayerData.get(player);
+		if (isHotbarOnly) return;
 
-        PlayerStats playerStats = playerData.getPlayerStats();
+		e.setCancelled(true);
+	}
 
-        double strMultiplier = (double)playerStats.getStr() / 100D;
+	@EventHandler
+	public void onKillEntity(EntityDeathEvent e) {
+		if (e.getEntity().getKiller() == null) return;
 
-        double lastDamage = e.getDamage() * strMultiplier;
+		Player player = e.getEntity().getKiller();
 
-        e.setDamage(lastDamage);
-    }
+		PlayerData playerData = PlayerData.get(player);
 
-    @EventHandler
-    public void onPlayerDamage(EntityDamageEvent e) {
-        if (!(e.getEntity() instanceof Player player)) return;
+		PlayerStats playerStats = playerData.getPlayerStats();
 
-        PlayerData playerData = PlayerData.get(player);
+		int entityMaxHealth = (int)e.getEntity().getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
 
-        PlayerStats playerStats = playerData.getPlayerStats();
+		playerStats.setStr(playerStats.getStr() + entityMaxHealth);
 
-        double defMultiplier = (double)playerStats.getDef() / 100D;
+	}
 
-        double lastDamage = e.getDamage() / defMultiplier;
+	@EventHandler
+	public void onPickup(EntityPickupItemEvent e) {
+		if (!(e.getEntity() instanceof Player player)) return;
 
-        double healthAfterDamage = playerStats.getHealth() - lastDamage;
+		PlayerData playerData = PlayerData.get(player);
 
-        playerStats.setHealth(healthAfterDamage);
+		playerData.pickUpItem(e.getItem().getItemStack());
 
-        e.setDamage(0);
-    }
+		int amount = e.getItem().getItemStack().getAmount();
+		Material type = e.getItem().getItemStack().getType();
+
+		player.sendTitle(
+				"",
+				ChatColor.GREEN + "+ "
+						+ ChatColor.AQUA + amount
+						+ ChatColor.RESET + "x " + type,
+				0, 0, 15);
+
+		e.getItem().getWorld().playSound(
+				e.getItem().getLocation(),
+				Sound.ENTITY_ITEM_PICKUP,
+				1,
+				1 + (float)Math.random());
+
+		PlayerStats playerStats = playerData.getPlayerStats();
+
+		if (type.getMaxStackSize() == 1) {
+			playerStats.setDef(playerStats.getDef() + 5 * amount);
+		}else {
+			playerStats.setMaxHealth(playerStats.getMaxHealth() + amount);
+		}
+
+		playerStats.setHealth(playerStats.getHealth() + amount * playerStats.getMaxHealth() / 100);
+		player.setFoodLevel(player.getFoodLevel() + 1);
+
+		e.setCancelled(true);
+		e.getItem().remove();
+	}
+
+	@EventHandler
+	public void onPlayerAttack(EntityDamageByEntityEvent e) {
+		if (!(e.getDamager() instanceof Player player)) return;
+
+		PlayerData playerData = PlayerData.get(player);
+
+		PlayerStats playerStats = playerData.getPlayerStats();
+
+		double strMultiplier = (double)playerStats.getStr() / 100D;
+
+		double lastDamage = e.getDamage() * strMultiplier;
+
+		e.setDamage(lastDamage);
+	}
+
+	@EventHandler
+	public void onPlayerDamage(EntityDamageEvent e) {
+		if (!(e.getEntity() instanceof Player player)) return;
+
+		PlayerData playerData = PlayerData.get(player);
+
+		PlayerStats playerStats = playerData.getPlayerStats();
+
+		double defMultiplier = (double)playerStats.getDef() / 100D;
+
+		double lastDamage = e.getDamage() / defMultiplier;
+
+		double healthAfterDamage = playerStats.getHealth() - lastDamage;
+
+		playerStats.setHealth(healthAfterDamage);
+
+		e.setDamage(0);
+	}
 
 }
